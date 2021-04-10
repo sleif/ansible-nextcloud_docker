@@ -92,7 +92,10 @@
   ansible.builtin.command:
     docker exec --user www-data nextcloud php occ app:install {{ item }}
   loop: "{{ nextcloud_apps_enabled_default }} + {{ nextcloud_apps_enabled_custom }}"
-  when: item not in nextcloud_app_list.enabled
+  when:
+    - item not in nextcloud_app_list.enabled
+    - item not in nextcloud_app_list.disabled
+  ignore_errors: true
 
 - name: nextcloud | enable default and custom apps
   ansible.builtin.command:
