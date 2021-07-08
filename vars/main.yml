@@ -24,6 +24,7 @@ nextcloud_config_system:
     preview_max_x: "2048"
     preview_max_y: "2048"
     jpeg_quality: "60"
+    default_phone_region: "DE"
 
 # nexcloud config.php smtp parameters
 nextcloud_config_system_smtp:

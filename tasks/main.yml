@@ -11,20 +11,21 @@
 - name: additional nginx proxy configuration from nginx_vhosts_defaults
   ansible.builtin.lineinfile:
     path: "{{ nginx_storage_dir_base }}/nginx/vhost.d/{{ item.1 }}"
-    create: yes
-    line: "{{ item.0.name }} {{ item.0.value }};"
-    regexp: "^{{ item.0.name }}.*"
+    create: true
+    line: "{{ item.0.name }} {{ item.0.value }}"
+    regexp: "^{{ item.0.name }}\ .*"
     mode: "0644"
   with_nested:
     - "{{ nginx_vhosts_defaults }}"
     - "{{ nextcloud_container_env.letsencrypt.VIRTUAL_HOST.split(',') }}"
   when: nextcloud_container_env.letsencrypt.VIRTUAL_HOST
-  tags: nginx_vhosts_defaults
+  tags:
+    - nginx_vhosts_defaults
 
 - name: additional nginx proxy configuration about letsencrypt
   ansible.builtin.lineinfile:
     path: "{{ nginx_storage_dir_base }}/nginx/vhost.d/{{ item.1 }}"
-    create: yes
+    create: true
     line: "{{ item.0.name }} {{ item.0.value }};"
     regexp: "^{{ item.0.name }}.*"
     mode: "0644"
@@ -33,7 +34,8 @@
         { name: "set_real_ip_from", value: "{{ DOCKER_NETWORK_SUBNET }}" }, ]
     - "{{ nextcloud_container_env.letsencrypt.VIRTUAL_HOST.split(',') }}"
   when: nextcloud_container_env.letsencrypt.VIRTUAL_HOST
-  tags: nginx_vhosts_defaults
+  tags:
+    - nginx_vhosts_defaults
 
 - name: nextcloud | update Nextcloud apps before a possible update of the container
   ansible.builtin.include_tasks:
@@ -47,12 +49,15 @@
       - name: "{{ DOCKER_NETWORK_NAME }}"
         aliases:
           - nextcloud-container
-    networks_cli_compatible: yes
+    networks_cli_compatible: true
     state: started
     restart_policy: always
-    recreate: yes
-    #restart: yes
-    pull: yes
+    recreate: true
+    #restart: true
+    pull: true
+    ports:
+      - '443:443/tcp'
+      - '80:80/tcp'
     volumes:
       - "{{ container_storage_dir_base }}/nextcloud/nextcloud:/var/www/html:Z"
       - "{{ container_storage_dir_base }}/nextcloud/nextcloud_config:/var/www/html/config:Z"
@@ -72,7 +77,7 @@
     # url: "https://{{ nextcloud_container_env.letsencrypt.VIRTUAL_HOST.split(',')[0] }}/"
     # status_code: 200
     status_code: [200, 400]
-    validate_certs: False
+    validate_certs: false
   register: result
   until: result is succeeded
   retries: 120
@@ -165,5 +170,5 @@
 - name: Print information how to tune Nextcloud Database
   ansible.builtin.debug:
     msg:
-     - "on host {{ ansible_host }} run the following command as root user"
-     - "docker exec --user www-data nextcloud php occ db:convert-filecache-bigint --no-interaction"
+      - "on host {{ ansible_host }} run the following command as root user"
+      - "docker exec --user www-data nextcloud php occ db:convert-filecache-bigint --no-interaction"

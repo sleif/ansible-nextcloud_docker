@@ -34,30 +34,35 @@ nextcloud_apps_enabled_custom: []
 nextcloud_apps_disabled: []
 
 nginx_vhosts_defaults: [
-  { name: "client_max_body_size",  value: "0" },
-  { name: "fastcgi_request_buffering", value: "off" },
-  { name: "proxy_connect_timeout", value: "604" },
-  { name: "proxy_send_timeout", value: "603" },
-  { name: "proxy_read_timeout", value: "603" },
-  { name: "real_ip_header", value: "X-Forwarded-For" },
-  { name: "send_timeout", value: "603" },
-  ]
+  {name: "client_max_body_size", value: "0;"},
+  {name: "fastcgi_request_buffering", value: "off;"},
+  {name: "proxy_connect_timeout", value: "604;"},
+  {name: "proxy_send_timeout", value: "603;"},
+  {name: "proxy_read_timeout", value: "603;"},
+  {name: "real_ip_header", value: "X-Forwarded-For;"},
+  {name: "send_timeout", value: "603;"},
+  {name: "location = /.well-known/carddav", value: "{return 301 /remote.php/dav;}"},
+  {name: "location = /.well-known/caldav", value: "{return 301 /remote.php/dav;}"},
+  {name: "location ^~ /.well-known", value: "{return 301 /index.php$uri;}"}]
 
 # nexcloud config.php smtp parameters
 MAIL_SMTPHOST: ''
 MAIL_SMTPPORT: '25'
-MAIL_SMTPAUTHTYPE: 'LOGIN' # 'PLAIN'
+MAIL_SMTPAUTHTYPE: 'LOGIN'
+# MAIL_SMTPAUTHTYPE: 'PLAIN'
 MAIL_FROM_ADDRESS: 'nextcloud-noreplay'
 MAIL_DOMAIN: ''
 MAIL_SMTPNAME: ''
 MAIL_SMTPPASSWORD: ''
-MAIL_SMTPSECURE: '' # tls, ssl
+MAIL_SMTPSECURE: ''
+# MAIL_SMTPSECURE: '' # tls, ssl
 MAIL_SMTPAUTH: 'false'
 
 # nextcloud config.php ldap parameters (optional)
 LDAP_HOST: '127.0.0.1'
 LDAP_PROTOCOL: 'ldap'
-LDAP_BASE_DN: '' # "dc=example,dc=com"
+LDAP_BASE_DN: ''
+# LDAP_BASE_DN: "dc=example,dc=com"
 LDAP_ADMIN_PASSWORD: ''
 
 LDAP_AUTH:
