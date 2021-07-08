@@ -32,7 +32,7 @@ Example Playbook
         - { role: sleif.redis_docker, tags: "redis_docker" }
         - { role: sleif.mariadb_docker, tags: "mariadb_docker" }
         - { role: sleif.nextcloud_docker, tags: "nextcloud_docker",
-                                                      NEXTCLOUD_VERSION: "19",
+                                                      NEXTCLOUD_VERSION: "21",
                                                       MYSQL_USER: "mysql_db_user",
                                                       MYSQL_PASSWORD: "mysql_db_user_password",
                                                       MYSQL_DATABASE: "mariadb_nextcloud_database",
