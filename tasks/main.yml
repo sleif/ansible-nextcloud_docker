@@ -55,9 +55,7 @@
     recreate: true
     #restart: true
     pull: true
-    ports:
-      - '443:443/tcp'
-      - '80:80/tcp'
+    ports: "{{ nextcloud_external_ports }}"
     volumes:
       - "{{ container_storage_dir_base }}/nextcloud/nextcloud:/var/www/html:Z"
       - "{{ container_storage_dir_base }}/nextcloud/nextcloud_config:/var/www/html/config:Z"
