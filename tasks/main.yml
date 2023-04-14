@@ -1,14 +1,20 @@
 ---
 
-- name: nextcloud | merge container env | letsencrypt
+- name: Nextcloud | merge container env | letsencrypt
   ansible.builtin.set_fact:
-    nextcloud_container_env_options: "{{ nextcloud_container_env_options |  default({}) | combine (nextcloud_container_env.letsencrypt) }}"
+    nextcloud_container_env_options: "{{ nextcloud_container_env_options | default({}) | combine(nextcloud_container_env.letsencrypt) }}"
   when: nextcloud_container_env.letsencrypt.VIRTUAL_HOST
 
 # - ansible.builtin.debug:
 #     msg: "{{ nextcloud_container_env.main | combine( nextcloud_container_env_options | default({}) ) }}"
 
-- name: additional nginx proxy configuration from nginx_vhosts_defaults
+# - name: Nextcloud | install default and custom apps
+#   ansible.builtin.debug:
+#     msg: "{{ item }}"
+#   loop: "{{ [nextcloud_apps_enabled_default + nextcloud_apps_enabled_custom] | flatten | unique }}"
+#   ignore_errors: true
+# - pause:
+- name: Additional nginx proxy configuration from nginx_vhosts_defaults
   ansible.builtin.lineinfile:
     path: "{{ nginx_storage_dir_base }}/nginx/vhost.d/{{ item.1 }}"
     create: true
@@ -22,7 +28,7 @@
   tags:
     - nginx_vhosts_defaults
 
-- name: additional nginx proxy configuration about letsencrypt
+- name: Additional nginx proxy configuration about letsencrypt
   ansible.builtin.lineinfile:
     path: "{{ nginx_storage_dir_base }}/nginx/vhost.d/{{ item.1 }}"
     create: true
@@ -31,13 +37,13 @@
     mode: "0644"
   with_nested:
     - [
-        { name: "set_real_ip_from", value: "{{ DOCKER_NETWORK_SUBNET }}" }, ]
+        {name: "set_real_ip_from", value: "{{ DOCKER_NETWORK_SUBNET }}"}, ]
     - "{{ nextcloud_container_env.letsencrypt.VIRTUAL_HOST.split(',') }}"
   when: nextcloud_container_env.letsencrypt.VIRTUAL_HOST
   tags:
     - nginx_vhosts_defaults
 
-- name: nextcloud | update Nextcloud apps before a possible update of the container
+- name: Nextcloud | update Nextcloud apps before a possible update of the container
   ansible.builtin.include_tasks:
     file: nextcloud_update_apps.yml
 
@@ -53,7 +59,7 @@
     state: started
     restart_policy: always
     recreate: true
-    #restart: true
+    # restart: true
     pull: true
     ports: "{{ nextcloud_external_ports }}"
     volumes:
@@ -62,14 +68,16 @@
       - "{{ container_storage_dir_base }}/nextcloud/nextcloud_custom_apps:/var/www/html/custom_apps:Z"
       - "{{ container_storage_dir_base }}/nextcloud/nextcloud_data:/var/www/html/data:Z"
       - "{{ container_storage_dir_base }}/nextcloud/nextcloud_themes:/var/www/html/themes:Z"
-    env: "{{ nextcloud_container_env.main | combine( nextcloud_container_env_options | default({}) ) }}"
+    env: "{{ nextcloud_container_env.main | combine(nextcloud_container_env_options | default({})) }}"
+    tmpfs:
+      - /tmp
   register: _nextcloud
 
-- name: nextcloud | register container IP
+- name: Nextcloud | register container IP
   ansible.builtin.set_fact:
-    _container_ip: "{{ _nextcloud.ansible_facts.docker_container.NetworkSettings.Networks[ DOCKER_NETWORK_NAME ].IPAddress }}"
+    _container_ip: "{{ _nextcloud.container.NetworkSettings.Networks[DOCKER_NETWORK_NAME].IPAddress }}"
 
-- name: nextcloud | wait for nextcloud service comes up
+- name: Nextcloud | wait for nextcloud service comes up
   ansible.builtin.uri:
     url: "http://{{ _container_ip }}/"
     # url: "https://{{ nextcloud_container_env.letsencrypt.VIRTUAL_HOST.split(',')[0] }}/"
@@ -81,63 +89,63 @@
   retries: 120
   delay: 10
 
-- name: nextcloud | get enabled and disabled apps
-  ansible.builtin.command:
-    docker exec --user www-data nextcloud php occ app:list --shipped=false --output=json
+- name: Nextcloud | get enabled and disabled apps
+  ansible.builtin.shell:
+    docker exec --user www-data nextcloud php occ app:list --shipped=false --output=json | grep "{"
   register: nextcloud_app_list_result
   changed_when: false
 
-- name: nextcloud | set_fact nextcloud_app_list
+- name: Nextcloud | set_fact nextcloud_app_list
   ansible.builtin.set_fact:
-    nextcloud_app_list: "{{ nextcloud_app_list_result.stdout }}"
+    nextcloud_app_list: "{{ nextcloud_app_list_result.stdout | from_json }}"
 
-- name: nextcloud | install default and custom apps
+- name: Nextcloud | install default and custom apps
   ansible.builtin.command:
     docker exec --user www-data nextcloud php occ app:install {{ item }}
-  loop: "{{ nextcloud_apps_enabled_default }} + {{ nextcloud_apps_enabled_custom }}"
+  loop: "{{ [nextcloud_apps_enabled_default + nextcloud_apps_enabled_custom] | flatten | unique }}"
   when:
     - item not in nextcloud_app_list.enabled
     - item not in nextcloud_app_list.disabled
   ignore_errors: true
 
-- name: nextcloud | enable default and custom apps
+- name: Nextcloud | enable default and custom apps
   ansible.builtin.command:
     docker exec --user www-data nextcloud php occ app:enable {{ item }}
-  loop: "{{ nextcloud_apps_enabled_default }} + {{ nextcloud_apps_enabled_custom }}"
+  loop: "{{ [nextcloud_apps_enabled_default + nextcloud_apps_enabled_custom] | flatten | unique }}"
   when: item not in nextcloud_app_list.enabled
 
-- name: nextcloud | remove apps not wanted
+- name: Nextcloud | remove apps not wanted
   ansible.builtin.command:
     docker exec --user www-data nextcloud php occ app:disable {{ item }}
   loop: "{{ nextcloud_apps_disabled }}"
   when: item in nextcloud_app_list.enabled
 
 # https://www.jeffgeerling.com/blog/2017/changing-deeply-nested-dict-variable-ansible-playbook
-- name: nextcloud | merge nextcloud_config | system
+- name: Nextcloud | merge nextcloud_config | system
   ansible.builtin.set_fact:
     nextcloud_config: "{{ nextcloud_config |  default({}) | combine ({'system': nextcloud_config_system.system }, recursive=True)  }}"
 
-- name: nextcloud | merge nextcloud_config | system mail
+- name: Nextcloud | merge nextcloud_config | system mail
   ansible.builtin.set_fact:
     nextcloud_config: "{{ nextcloud_config |  default({}) | combine ({'system': nextcloud_config_system_smtp.system }, recursive=True)  }}"
   when: nextcloud_config_system_smtp.system.mail_smtphost
 
-- name: nextcloud | merge nextcloud_config | apps preview
+- name: Nextcloud | merge nextcloud_config | apps preview
   ansible.builtin.set_fact:
     nextcloud_config: "{{ nextcloud_config |  default({}) | combine ({'apps': {'preview': nextcloud_config_apps_preview.apps.preview }}, recursive=True)  }}"
 
-- name: nextcloud | merge nextcloud_config | apps previewgenerator
+- name: Nextcloud | merge nextcloud_config | apps previewgenerator
   ansible.builtin.set_fact:
     nextcloud_config: "{{ nextcloud_config |  default({}) |
                       combine ({'apps': {'previewgenerator': nextcloud_config_apps_previewgenerator.apps.previewgenerator }}, recursive=True)  }}"
 
-- name: nextcloud | merge nextcloud_config | apps user_ldap
+- name: Nextcloud | merge nextcloud_config | apps user_ldap
   ansible.builtin.set_fact:
     nextcloud_config: "{{ nextcloud_config |  default({}) |
                        combine ({'apps': {'user_ldap': nextcloud_config_apps_user_ldap.apps.user_ldap }}, recursive=True)  }}"
   when: nextcloud_config_apps_user_ldap.apps.user_ldap.s01ldap_base
 
-- name: nextcloud | write temporary config file /var/www/html/config/nextcloud_config_file_for_import
+- name: Nextcloud | write temporary config file /var/www/html/config/nextcloud_config_file_for_import
   ansible.builtin.copy:
     content: "{{ nextcloud_config | to_nice_json(indent=2) }}"
     dest: "{{ container_storage_dir_base }}/nextcloud/nextcloud_config/nextcloud_config_file_for_import"
@@ -146,13 +154,13 @@
     setype: "container_file_t"
   changed_when: false
 
-- name: nextcloud | apply temporary config file /var/www/html/config/nextcloud_config_file_for_import
+- name: Nextcloud | apply temporary config file /var/www/html/config/nextcloud_config_file_for_import
   ansible.builtin.command:
     docker exec --user www-data nextcloud php occ config:import /var/www/html/config/nextcloud_config_file_for_import
   register: result
   changed_when: result is success
 
-- name: nextcloud | remove temporary config file /var/www/html/config/nextcloud_config_file_for_import
+- name: Nextcloud | remove temporary config file /var/www/html/config/nextcloud_config_file_for_import
   ansible.builtin.file:
     path: /var/www/html/config/nextcloud_config_file_for_import
     state: absent
