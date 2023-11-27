@@ -3,7 +3,7 @@
 - name: Nextcloud | merge container env | letsencrypt
   ansible.builtin.set_fact:
     nextcloud_container_env_options: "{{ nextcloud_container_env_options | default({}) | combine(nextcloud_container_env.letsencrypt) }}"
-  when: nextcloud_container_env.letsencrypt.VIRTUAL_HOST
+  when: nextcloud_container_env.letsencrypt.virtual_host
 
 # - ansible.builtin.debug:
 #     msg: "{{ nextcloud_container_env.main | combine( nextcloud_container_env_options | default({}) ) }}"
@@ -23,8 +23,8 @@
     mode: "0644"
   with_nested:
     - "{{ nginx_vhosts_defaults }}"
-    - "{{ nextcloud_container_env.letsencrypt.VIRTUAL_HOST.split(',') }}"
-  when: nextcloud_container_env.letsencrypt.VIRTUAL_HOST
+    - "{{ nextcloud_container_env.letsencrypt.virtual_host.split(',') }}"
+  when: nextcloud_container_env.letsencrypt.virtual_host
   tags:
     - nginx_vhosts_defaults
 
@@ -36,10 +36,9 @@
     regexp: "^{{ item.0.name }}.*"
     mode: "0644"
   with_nested:
-    - [
-        {name: "set_real_ip_from", value: "{{ DOCKER_NETWORK_SUBNET }}"}, ]
-    - "{{ nextcloud_container_env.letsencrypt.VIRTUAL_HOST.split(',') }}"
-  when: nextcloud_container_env.letsencrypt.VIRTUAL_HOST
+    - [{name: "set_real_ip_from", value: "{{ docker_network_subnet }}"}]
+    - "{{ nextcloud_container_env.letsencrypt.virtual_host.split(',') }}"
+  when: nextcloud_container_env.letsencrypt.virtual_host
   tags:
     - nginx_vhosts_defaults
 
@@ -50,9 +49,9 @@
 - name: Nextcloud-Container starten
   community.general.docker_container:
     name: nextcloud
-    image: "nextcloud:{{ NEXTCLOUD_VERSION }}"
+    image: "nextcloud:{{ nextcloud_version }}"
     networks:
-      - name: "{{ DOCKER_NETWORK_NAME }}"
+      - name: "{{ docker_network_name }}"
         aliases:
           - nextcloud-container
     networks_cli_compatible: true
@@ -75,12 +74,12 @@
 
 - name: Nextcloud | register container IP
   ansible.builtin.set_fact:
-    _container_ip: "{{ _nextcloud.container.NetworkSettings.Networks[DOCKER_NETWORK_NAME].IPAddress }}"
+    _container_ip: "{{ _nextcloud.container.NetworkSettings.Networks[docker_network_name].IPAddress }}"
 
 - name: Nextcloud | wait for nextcloud service comes up
   ansible.builtin.uri:
     url: "http://{{ _container_ip }}/"
-    # url: "https://{{ nextcloud_container_env.letsencrypt.VIRTUAL_HOST.split(',')[0] }}/"
+    # url: "https://{{ nextcloud_container_env.letsencrypt.virtual_host.split(',')[0] }}/"
     # status_code: 200
     status_code: [200, 400]
     validate_certs: false
@@ -91,7 +90,7 @@
 
 - name: Nextcloud | get enabled and disabled apps
   ansible.builtin.shell:
-    docker exec --user www-data nextcloud php occ app:list --shipped=false --output=json | grep "{"
+    set -o pipefail; docker exec --user www-data nextcloud php occ app:list --shipped=false --output=json | grep "{"
   register: nextcloud_app_list_result
   changed_when: false
 
@@ -99,7 +98,7 @@
   ansible.builtin.set_fact:
     nextcloud_app_list: "{{ nextcloud_app_list_result.stdout | from_json }}"
 
-- name: Nextcloud | install default and custom apps
+- name: Nextcloud | install default and custom apps  # noqa: no-changed-when ignore-errors
   ansible.builtin.command:
     docker exec --user www-data nextcloud php occ app:install {{ item }}
   loop: "{{ [nextcloud_apps_enabled_default + nextcloud_apps_enabled_custom] | flatten | unique }}"
@@ -108,13 +107,13 @@
     - item not in nextcloud_app_list.disabled
   ignore_errors: true
 
-- name: Nextcloud | enable default and custom apps
+- name: Nextcloud | enable default and custom apps  # noqa: no-changed-when
   ansible.builtin.command:
     docker exec --user www-data nextcloud php occ app:enable {{ item }}
   loop: "{{ [nextcloud_apps_enabled_default + nextcloud_apps_enabled_custom] | flatten | unique }}"
   when: item not in nextcloud_app_list.enabled
 
-- name: Nextcloud | remove apps not wanted
+- name: Nextcloud | remove apps not wanted  # noqa: no-changed-when
   ansible.builtin.command:
     docker exec --user www-data nextcloud php occ app:disable {{ item }}
   loop: "{{ nextcloud_apps_disabled }}"
@@ -123,26 +122,26 @@
 # https://www.jeffgeerling.com/blog/2017/changing-deeply-nested-dict-variable-ansible-playbook
 - name: Nextcloud | merge nextcloud_config | system
   ansible.builtin.set_fact:
-    nextcloud_config: "{{ nextcloud_config |  default({}) | combine ({'system': nextcloud_config_system.system }, recursive=True)  }}"
+    nextcloud_config: "{{ nextcloud_config | default({}) | combine({'system': nextcloud_config_system.system}, recursive=true) }}"
 
 - name: Nextcloud | merge nextcloud_config | system mail
   ansible.builtin.set_fact:
-    nextcloud_config: "{{ nextcloud_config |  default({}) | combine ({'system': nextcloud_config_system_smtp.system }, recursive=True)  }}"
+    nextcloud_config: "{{ nextcloud_config | default({}) | combine({'system': nextcloud_config_system_smtp.system}, recursive=true) }}"
   when: nextcloud_config_system_smtp.system.mail_smtphost
 
 - name: Nextcloud | merge nextcloud_config | apps preview
   ansible.builtin.set_fact:
-    nextcloud_config: "{{ nextcloud_config |  default({}) | combine ({'apps': {'preview': nextcloud_config_apps_preview.apps.preview }}, recursive=True)  }}"
+    nextcloud_config: "{{ nextcloud_config | default({}) | combine({'apps': {'preview': nextcloud_config_apps_preview.apps.preview}}, recursive=true) }}"
 
 - name: Nextcloud | merge nextcloud_config | apps previewgenerator
   ansible.builtin.set_fact:
-    nextcloud_config: "{{ nextcloud_config |  default({}) |
-                      combine ({'apps': {'previewgenerator': nextcloud_config_apps_previewgenerator.apps.previewgenerator }}, recursive=True)  }}"
+    nextcloud_config: "{{ nextcloud_config | default({}) |
+                      combine({'apps': {'previewgenerator': nextcloud_config_apps_previewgenerator.apps.previewgenerator}}, recursive=true) }}"
 
 - name: Nextcloud | merge nextcloud_config | apps user_ldap
   ansible.builtin.set_fact:
-    nextcloud_config: "{{ nextcloud_config |  default({}) |
-                       combine ({'apps': {'user_ldap': nextcloud_config_apps_user_ldap.apps.user_ldap }}, recursive=True)  }}"
+    nextcloud_config: "{{ nextcloud_config | default({}) |
+                       combine({'apps': {'user_ldap': nextcloud_config_apps_user_ldap.apps.user_ldap}}, recursive=true) }}"
   when: nextcloud_config_apps_user_ldap.apps.user_ldap.s01ldap_base
 
 - name: Nextcloud | write temporary config file /var/www/html/config/nextcloud_config_file_for_import

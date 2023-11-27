@@ -6,12 +6,13 @@
   changed_when: false
   ignore_errors: true
 
-- ansible.builtin.debug:
+- name: nextcloud | debug
+  ansible.builtin.debug:
     var: nextcloud_app_updates.stdout_lines
   when:
     - not nextcloud_app_updates.failed
 
-- name: nextcloud | apply app updates
+- name: nextcloud | apply app updates  # noqa: no-changed-when
   ansible.builtin.command:
     docker exec --user www-data nextcloud php occ app:update --all
   when:

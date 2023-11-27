@@ -27,17 +27,17 @@ Example Playbook
     - hosts: "server"
       user: root
       vars:
-        DOCKER_NETWORK_NAME: 'custom_docker_network'
+        docker_network_name: 'custom_docker_network'
       roles:
         - { role: sleif.redis_docker, tags: "redis_docker" }
         - { role: sleif.mariadb_docker, tags: "mariadb_docker" }
         - { role: sleif.nextcloud_docker, tags: "nextcloud_docker",
-                                                      NEXTCLOUD_VERSION: "21",
-                                                      MYSQL_USER: "mysql_db_user",
-                                                      MYSQL_PASSWORD: "mysql_db_user_password",
-                                                      MYSQL_DATABASE: "mariadb_nextcloud_database",
-                                                      VIRTUAL_HOST: "cloud.example.com",
-                                                      LETSENCRYPT_EMAIL: "letsencrypt@example.com" }
+                                                      nextcloud_version: "21",
+                                                      mysql_user: "mysql_db_user",
+                                                      mysql_password: "mysql_db_user_password",
+                                                      mysql_database: "mariadb_nextcloud_database",
+                                                      virtual_host: "cloud.example.com",
+                                                      letsencrypt_email: "letsencrypt@example.com" }
 
 License
 -------
