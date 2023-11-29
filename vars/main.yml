@@ -71,7 +71,7 @@ nextcloud_config_apps_user_ldap:
       # s01has_memberof_filter_support: 1
       # s01home_folder_naming_rule:
       s01last_jpegPhoto_lookup: 0
-      # s01ldap_agent_password: "{{ NEXTCLOUD_LDAP_ADMIN_PASSWORD }}"
+      # s01ldap_agent_password: "{{ nextcloud_ldap_admin_password }}"
       # s01ldap_attributes_for_group_search:
       # s01ldap_attributes_for_user_search:
       # s01ldap_backup_host:
